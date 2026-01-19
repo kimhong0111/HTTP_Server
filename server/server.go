@@ -32,7 +32,7 @@ func (b *BankingServer) ServeHTTP(w http.ResponseWriter, r *http.Request){
         b.showBalance(w,name)
 	}
     case fmt.Sprintf("/user/deposit/%s=%s",name,amount):{
-        b.Request.Deposit(name,amount)
+        b.processDeposit(w,name,amount)
     }
 	/*case fmt.Sprintf("/user/withdraw/%s=%s",name,amount):{
         amount,err:=strconv.ParseFloat(amount,64)
@@ -46,13 +46,8 @@ func (b *BankingServer) ServeHTTP(w http.ResponseWriter, r *http.Request){
 }
 
 func (s *StoreInformation) GetUserBalance(name string) string {
-	 if(s.Balance[name]==""){
-        return "0$"
-	}else{
-		balance:=s.Balance[name]
-	 balance+="$"
+	 balance:=s.Balance[name]
 	 return balance
-	}
 }
 
 func (s *StoreInformation) Deposit(name string, amount string){
@@ -62,7 +57,16 @@ func (s *StoreInformation) Deposit(name string, amount string){
 
 func (b *BankingServer) showBalance(w http.ResponseWriter,name string){
 	 balance:=b.Request.GetUserBalance(name)
+	  if balance==""{
+		w.WriteHeader(http.StatusNotFound)
+	  }
 	 fmt.Fprint(w,balance)
+}
+
+func (b *BankingServer) processDeposit(w http.ResponseWriter,name string , amount string){
+     b.Request.Deposit(name,amount)
+	 w.WriteHeader(http.StatusAccepted)
+
 }
 
 
