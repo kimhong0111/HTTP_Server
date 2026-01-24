@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 type Request interface{
   GetUserBalance(name string) string
   Deposit(name string , amount string)
+  Withdraw(name string, amount float64)
 }
 
 type BankingServer struct {
@@ -34,14 +36,10 @@ func (b *BankingServer) ServeHTTP(w http.ResponseWriter, r *http.Request){
     case fmt.Sprintf("/user/deposit/%s=%s",name,amount):{
         b.processDeposit(w,name,amount)
     }
-	/*case fmt.Sprintf("/user/withdraw/%s=%s",name,amount):{
-        amount,err:=strconv.ParseFloat(amount,64)
-		if err!=nil{
-			fmt.Printf("Fail converting")
-		}
-        b.request.Withdraw(name,amount)
+	case fmt.Sprintf("/user/withdraw/%s=%s",name,amount):{
+		b.processWithdraw(w,name,amount)
 
-    }*/
+    }
  }
 }
 
@@ -69,13 +67,26 @@ func (b *BankingServer) processDeposit(w http.ResponseWriter,name string , amoun
 
 }
 
+func (b *BankingServer) processWithdraw(w http.ResponseWriter,name string , amount string){
+	 convert,err:=strconv.ParseFloat(amount,64)
+	 if err!=nil{
+		fmt.Println("error converting to float")
+	 }
+	 b.Request.Withdraw(name,convert)
+	 w.WriteHeader(http.StatusAccepted)
+}
+
+
 
 
  func (s *StoreInformation) Withdraw(name string, amount float64) {
 	  convert,_:=strconv.ParseFloat(s.Balance[name],64)
+	  if convert < amount{
+		log.Fatal("Unsufficent Balance")
+		return
+	  }
       result:=convert-amount
-	  convStringRes:=fmt.Sprint(result)
-	  fmt.Printf("%s\n",convStringRes)
+	  convStringRes:=fmt.Sprintf("%.2f",result)
 	  s.Balance[name]=convStringRes
 
 }
@@ -86,12 +97,12 @@ func  getPrefix(r *http.Request,name string, amount string) (string,string){
          name=strings.TrimPrefix(r.URL.Path,"/user/balance/")
 	}
 	if(r.Method=="POST"){
-	 if contains:=strings.ContainsAny(r.URL.Path,"deposit"); contains{
+	 if contains:=strings.Contains(r.URL.Path,"deposit"); contains{
 	  trimmed:=strings.TrimPrefix(r.URL.Path,"/user/deposit/")
 	  parts:=strings.SplitN(trimmed,"=",2)
       name=parts[0]
 	  amount=parts[1]
-	}else if contains:=strings.ContainsAny(r.URL.Path,"withdraw"); contains{
+	}else if contains:=strings.Contains(r.URL.Path,"withdraw"); contains{
       trimmed:=strings.TrimPrefix(r.URL.Path,"/user/withdraw/")
 	  parts:=strings.SplitN(trimmed,"=",2)
       name=parts[0]
